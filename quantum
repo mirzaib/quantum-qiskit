@@ -1,0 +1,102 @@
+# Helper function to build C-C-Z gate
+@circuit.subroutine(register=True)
+def ccz(targets=[0, 1, 2]):
+    """
+    implementation of three-qubit gate CCZ
+    """
+    # define three-qubit CCZ gate
+    ccz_gate = np.array([[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                         [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                         [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                         [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+                         [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+                         [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+                         [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+                         [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0]],
+                       dtype=complex)
+    
+    # instantiate circuit object
+    circ = Circuit()
+    
+    # add CCZ gate
+    circ.unitary(matrix=ccz_gate, targets=targets)
+    
+    return circ
+
+
+# All possible items and their corresponding oracles
+# define oracle dictionary using this CCZ gate
+oracle_sim = {"000": Circuit().x([0,1,2]).ccz(targets=[0, 1, 2]).x([0,1,2]),
+              "001": Circuit().x([0,1]).ccz(targets=[0, 1, 2]).x([0,1]),
+              "010": Circuit().x([0,2]).ccz(targets=[0, 1, 2]).x([0,2]),
+              "011": Circuit().x([0]).ccz(targets=[0, 1, 2]).x([0]),
+              "100": Circuit().x([1,2]).ccz(targets=[0, 1, 2]).x([1,2]),
+              "101": Circuit().x([1]).ccz(targets=[0, 1, 2]).x([1]),
+              "110": Circuit().x([2]).ccz(targets=[0, 1, 2]).x([2]),
+              "111": Circuit().ccz(targets=[0, 1, 2])
+          }
+
+
+# helper function for initialization
+def initialize(n_qubits=3):
+    """
+    function to apply hadamard to all qubits
+    """
+    # Initialize with superposition
+    circ = Circuit();
+    circ.h(np.arange(n_qubits))
+    #print(circ)
+    return circ
+
+
+# helper function for phase oracle
+def oracle(item):
+    """
+    function to apply oracle for given target item
+    """
+    # instantiate circuit object
+    circ = Circuit()
+    
+    # add oracle
+    circ.add_circuit(oracle_sim[item])
+    
+    return circ
+
+
+# helper function for amplification
+def amplify(n_qubits=3):
+    """
+    function for amplitude amplification
+    """
+    # instantiate circuit object
+    circ = Circuit()
+    
+    # Amplification
+    circ.h(np.arange(n_qubits))
+    circ.add_circuit(oracle_sim['000'])
+    circ.h(np.arange(n_qubits))
+    
+    return circ
+
+
+# helper function for grover algorithm
+def grover(item, n_qubits=3, n_reps=1):
+    """
+    function to put together individual modules of Grover algorithm
+    """
+    # initialize
+    grover_circ = initialize()
+    # oracle and amplify
+    for ii in range(n_reps):
+        # get oracle
+        or_circ = oracle(item)
+        grover_circ.add(or_circ)
+        # amplify
+        amplification = amplify()
+        grover_circ.add(amplification)
+    
+    return grover_circ
+        
+
+
+     
